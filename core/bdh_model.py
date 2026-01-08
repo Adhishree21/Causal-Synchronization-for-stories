@@ -1,94 +1,65 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from tqdm import tqdm
 
 class BDHModel(nn.Module):
-    """
-    Refined Baby Dragon Hatchling (BDH) Core.
-    """
-    def __init__(self, vocab_size, neuron_dim=512, sparsity=0.02, learning_rate=0.005):
+    def __init__(self, vocab_size, neuron_dim=1024, sparsity=0.02, learning_rate=0.01, device='cuda'):
         super(BDHModel, self).__init__()
-        self.vocab_size = vocab_size
+        self.device = torch.device(device if torch.cuda.is_available() else 'cpu')
         self.neuron_dim = neuron_dim
         self.sparsity = sparsity
-        self.lr = learning_rate
         
-        # Synaptic Weights (sigma)
-        self.register_buffer('sigma', torch.zeros(neuron_dim, neuron_dim))
-        
-        # Fixed random sparse projection to neuronal space
-        self.register_buffer('projection', torch.randn(vocab_size, neuron_dim))
+        self.register_buffer('sigma', torch.zeros(neuron_dim, neuron_dim, device=self.device))
+        self.register_buffer('projection', torch.randn(vocab_size, neuron_dim, device=self.device))
         nn.init.orthogonal_(self.projection)
         
         self.k = int(neuron_dim * sparsity)
-        self.tension_threshold = 0.65 # Calibrated threshold
+        self.to(self.device)
 
     def get_sparse_activation(self, tokens):
-        """
-        Map tokens to sparse neuronal activations using k-Winners-Take-All.
-        """
-        # Sum projections of tokens in the window (simplified)
-        if tokens.dim() == 0:
-            tokens = tokens.unsqueeze(0)
-        
-        raw_activations = self.projection[tokens] # [L, neuron_dim]
-        
-        # k-WTA
-        top_val, _ = torch.topk(raw_activations, self.k, dim=-1)
+        tokens = tokens.to(self.device)
+        raw = self.projection[tokens]
+        if raw.dim() == 1: raw = raw.unsqueeze(0)
+        top_val, _ = torch.topk(raw, self.k, dim=-1)
         threshold = top_val[:, -1].unsqueeze(-1)
-        sparse_activations = (raw_activations >= threshold).float()
-        return sparse_activations
+        return (raw >= threshold).float()
 
-    def seed_backstory(self, backstory_tokens):
-        """
-        Initializes sigma based on character backstory.
-        """
+    def seed_backstory(self, backstory_tokens, strength=0.5):
         with torch.no_grad():
             activations = self.get_sparse_activation(backstory_tokens)
-            # Associative Seeding
-            for i in range(len(activations) - 1):
-                pre = activations[i].unsqueeze(1)
-                post = activations[i+1].unsqueeze(0)
-                self.sigma += self.lr * 50 * (pre @ post)
+            # Global Seeding: everything in backstory is somehow connected
+            # (Simplified for the hackathon logic)
+            centroid = torch.mean(activations, dim=0)
+            self.sigma = strength * torch.outer(centroid, centroid)
             self.sigma.clamp_(0, 1)
 
-    def forward(self, tokens, batch_size=1000):
-        """
-        Process book tokens and return tension scores.
-        """
+    def forward(self, tokens, plasticity=False):
         activations = self.get_sparse_activation(tokens)
-        tension_scores = []
+        tensions = []
+        sigma = self.sigma.clone()
         
-        # Stateful streaming inference
-        for i in tqdm(range(len(activations) - 1), desc="Streaming Narrative"):
-            x_t = activations[i]
-            x_next = activations[i+1]
-            
-            # Predict x_next
-            prediction = torch.matmul(self.sigma, x_t)
-            
-            # Tension = 1 - Cosine Similarity between prediction and reality
-            if torch.norm(prediction) > 0:
-                overlap = torch.dot(prediction, x_next) / (torch.norm(prediction) * torch.norm(x_next) + 1e-8)
+        for i in range(len(activations)):
+            x = activations[i]
+            # Prediction: based on current synaptic state
+            # Tension = 1 - (dot(sigma @ x, x) / normalization)
+            # This measures if the current state is supported by the synapses
+            pred = torch.mv(sigma, x)
+            if torch.norm(pred) > 0:
+                overlap = torch.dot(pred, x) / (torch.norm(pred) * torch.norm(x) + 1e-8)
+                tension = 1.0 - overlap.item()
             else:
-                overlap = 0.0
+                tension = 1.0
+            tensions.append(tension)
+            
+            if plasticity:
+                # Local Hebbian Update
+                sigma += 0.01 * torch.outer(x, x)
+                sigma.clamp_(0, 1)
                 
-            tension = 1.0 - overlap.item()
-            tension_scores.append(tension)
-            
-            # Hebbian Update (Continuous Learning)
-            update = self.lr * (x_t.unsqueeze(1) @ x_next.unsqueeze(0))
-            self.sigma += update
-            self.sigma.clamp_(0, 1)
-            
-        return torch.tensor(tension_scores)
+        return torch.tensor(tensions)
 
     def classify_consistency(self, tension_scores):
-        # We look for anomalies (inhibitory spikes)
-        # If any significant part of the book has high tension, it's a contradiction
-        max_tension = torch.max(tension_scores).item()
-        mean_tension = torch.mean(tension_scores).item()
-        # Heuristic: combine mean and max
-        score = 0.7 * mean_tension + 0.3 * max_tension
-        return 1 if score < self.tension_threshold else 0
+        if len(tension_scores) == 0: return 1
+        mean_t = torch.mean(tension_scores).item()
+        # High "Self-Support" (Low tension) = Consistent
+        return 1 if mean_t < 0.8945 else 0

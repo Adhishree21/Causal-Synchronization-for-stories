@@ -1,85 +1,89 @@
 import torch
 import pandas as pd
 import os
+import re
 from core.bdh_model import BDHModel
 from core.tokenizer import SimpleTokenizer
 from tqdm import tqdm
 
-# High-fidelity Simulation of Pathway Streaming for Windows Compatibility
-class PathwayEmulator:
-    @staticmethod
-    def read_streaming(path, chunk_size=5000):
-        with open(path, 'r', encoding='utf-8') as f:
-            while True:
-                chunk = f.read(chunk_size)
-                if not chunk:
-                    break
-                yield chunk
+def get_character_segments(book_text, char_name, window=200):
+    """
+    Extracts segments of the book where the character is mentioned.
+    """
+    segments = []
+    # Case insensitive search
+    pattern = re.compile(re.escape(char_name), re.IGNORECASE)
+    for match in pattern.finditer(book_text):
+        start = max(0, match.start() - window)
+        end = min(len(book_text), match.end() + window)
+        segments.append(book_text[start:end])
+    
+    # Merge overlapping segments
+    if not segments:
+        return []
+    
+    return " ... ".join(segments)
 
-def run_synaptrace_pipeline(book_path, backstory, model, tokenizer):
-    """
-    SynapTrace Pipeline: Seeds the BDH model and streams the novel.
-    """
+def run_synaptrace_pipeline(book_path, backstory, char_name, model, tokenizer):
     # 1. Synaptic Seeding
     backstory_tokens = tokenizer(backstory)
     model.seed_backstory(backstory_tokens)
     
-    # 2. Streaming Ingestion (Pathway Emulation)
-    all_tensions = []
-    print(f"Streaming novel: {os.path.basename(book_path)}")
+    # 2. Extract Character-Centric Narrative
+    with open(book_path, 'r', encoding='utf-8') as f:
+        full_text = f.read()
     
-    for chunk in PathwayEmulator.read_streaming(book_path):
-        tokens = tokenizer(chunk)
-        if len(tokens) < 2:
-            continue
-        with torch.no_grad():
-            tension = model(tokens)
-            all_tensions.extend(tension.tolist())
-            
-    # 3. Decision Logic
-    final_label = model.classify_consistency(torch.tensor(all_tensions))
-    return final_label
+    relevant_text = get_character_segments(full_text, char_name)
+    if not relevant_text:
+        # Fallback to a sample if name not found exactly
+        relevant_text = full_text[:20000]
+        
+    tokens = tokenizer(relevant_text)
+    
+    # 3. Stream through BDH
+    if len(tokens) < 2:
+        return 1
+        
+    with torch.no_grad():
+        tension = model(tokens)
+        
+    return model.classify_consistency(tension)
 
 def main():
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    print(f"Using Device: {device}")
+    
     train_df = pd.read_csv('train.csv')
     test_df = pd.read_csv('test.csv')
     
     print("Building Synaptic Vocabulary...")
     tokenizer = SimpleTokenizer()
-    # Fit on all available backstories and book samples
     all_texts = list(train_df['content']) + list(test_df['content'])
     for b in ['In search of the castaways.txt', 'The Count of Monte Cristo.txt']:
         with open(os.path.join('books', b), 'r', encoding='utf-8') as f:
-            all_texts.append(f.read()[:20000]) # Sample for vocab scaling
+            all_texts.append(f.read()[:50000]) 
     tokenizer.fit(all_texts)
     
-    print(f"Vocab Size: {tokenizer.size()}")
-    
     results = []
-    # Process Test Set
-    for idx, row in test_df.iterrows():
+    for idx, row in tqdm(test_df.iterrows(), total=len(test_df), desc="Analyzing Characters"):
         book_name = row['book_name']
         backstory = row['content']
+        char_name = row['char']
         
-        # Determine book path
         book_file = 'In search of the castaways.txt' if 'search' in book_name.lower() else 'The Count of Monte Cristo.txt'
         book_path = os.path.join('books', book_file)
         
-        # New model for each story state analysis
-        model = BDHModel(vocab_size=tokenizer.size(), neuron_dim=512)
+        model = BDHModel(vocab_size=tokenizer.size(), neuron_dim=512, device=device)
         
-        print(f"\nAnalyzing ID {row['id']} (Character: {row['char']})")
-        pred = run_synaptrace_pipeline(book_path, backstory, model, tokenizer)
+        pred = run_synaptrace_pipeline(book_path, backstory, char_name, model, tokenizer)
         
         results.append({
             'id': row['id'],
             'label': 'consistent' if pred == 1 else 'contradict'
         })
-        print(f"Result: {'CONSISTENT' if pred == 1 else 'CONTRADICT'}")
         
-    # Save Final Results
     pd.DataFrame(results).to_csv('results.csv', index=False)
-    print("\nInference Complete. Final results saved to results.csv")
+    print("\nInference Complete. Results saved to results.csv")
 
 if __name__ == "__main__":
     main()
