@@ -1,0 +1,7 @@
+pathway
+torch
+pandas
+numpy
+tqdm
+python-dotenv
+scikit-learn
