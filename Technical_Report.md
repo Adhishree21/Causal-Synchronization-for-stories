@@ -7,7 +7,13 @@
 ---
 
 ### 1. Introduction
-The challenge of long-context narrative consistency is traditionally addressed using RAG (Retrieval Augmented Generation) or sliding-window Transformers. However, these methods suffer from "context erosion" and quadratic complexity. SynapTrace introduces a biologically inspired alternative: the BDH architecture.
+SynapTrace is designed specifically for **KDSH 2026 - Track B: Causal Synchronization**. Unlike Track A (General AI), Track B demands deep auditing of narrative states over long temporal windows (100k+ words).
+
+#### 1.1 Track B Alignment
+- **Causal Synchronization**: We treat the character's backstory as a set of 'Causal Invariants' (Synaptic Anchors).
+- **Streaming Ingestion**: Powered by an emulated **Pathway** pipeline, we process the novel as a real-time event stream.
+- **Narrative Auditing**: Logical contradictions are detected as 'Synaptic Ruptures'—points where the narrative state vector drifts outside the semantic basin of the seeded constraints.
+- **Interpretability**: Contradictions manifest as spikes in the 'Harmony' metric, allowing investigators to pinpoint exact causal violations.
 
 ### 2. Method: Baby Dragon Hatchling (BDH)
 BDH is a scale-free neuronal network that processes information through synaptic plasticity rather than fixed KV-caches. 
