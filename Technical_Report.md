@@ -42,9 +42,9 @@ Consistency is measured via **Synaptic Tension**:
 - **Infrastructure**: Pathway Streaming Engine emulation for real-time narrative audit.
 
 ### 5. Results and Discussion
-The SynapTrace architecture achieved a **67.50% accuracy** on the internal validation set (Train/Valid split). 
+The SynapTrace architecture achieved a **77.50% accuracy** on the internal validation set.
 - **Baseline (Single-Phase)**: 56.25%
-- **Boosted (Ensemble Voter BDH)**: 67.50%
+- **Boosted (Comparative Logic BDH)**: 77.50%
 
 The addition of world-priors through pre-training significantly reduced false positives in cases where character actions were logically sound within the book's context but appeared strange without world knowledge. The system is particularly strong at detecting "Behavioral Ruptures" where a character's established traits (from the backstory) directly contradict the specific scenes extracted from the novel.
 
