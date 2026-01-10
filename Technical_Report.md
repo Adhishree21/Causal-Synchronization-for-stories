@@ -42,9 +42,11 @@ Consistency is measured via **Synaptic Tension**:
 - **Infrastructure**: Pathway Streaming Engine emulation for real-time narrative audit.
 
 ### 5. Results and Discussion
-The SynapTrace architecture achieved a **77.50% accuracy** on the internal validation set.
+The SynapTrace architecture achieved a **78.75% accuracy** on the internal validation set. 
 - **Baseline (Single-Phase)**: 56.25%
-- **Boosted (Comparative Logic BDH)**: 77.50%
+- **Boosted (Atomic Logic BDH)**: 78.75%
+
+The core efficiency comes from **Hebbian Seeding** (Single-pass synaptic updates) and **Atomic Fact Deconstruction**. By breaking the backstory into individual causal rules, the system performs a localized audit that can detect even a single-token contradiction that would otherwise be averaged out by larger semantic similarities.
 
 The addition of world-priors through pre-training significantly reduced false positives in cases where character actions were logically sound within the book's context but appeared strange without world knowledge. The system is particularly strong at detecting "Behavioral Ruptures" where a character's established traits (from the backstory) directly contradict the specific scenes extracted from the novel.
 
