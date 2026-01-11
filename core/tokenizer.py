@@ -1,27 +1,24 @@
-import re
 import torch
+from sentence_transformers import SentenceTransformer
 
-class SimpleTokenizer:
-    def __init__(self, vocab=None):
-        self.vocab = vocab or {"<PAD>": 0, "<UNK>": 1}
-        self.inv_vocab = {v: k for k, v in self.vocab.items()}
-        self.is_fitted = vocab is not None
+class SemanticTokenizer:
+    def __init__(self, model_name='all-MiniLM-L6-v2', device='cuda'):
+        self.device = torch.device(device if torch.cuda.is_available() else 'cpu')
+        self.model = SentenceTransformer(model_name).to(self.device)
+        self.embedding_dim = self.model.get_sentence_embedding_dimension()
 
-    def fit(self, texts):
-        for text in texts:
-            words = self._tokenize(text)
-            for word in words:
-                if word not in self.vocab:
-                    self.vocab[word] = len(self.vocab)
-        self.inv_vocab = {v: k for k, v in self.vocab.items()}
-        self.is_fitted = True
+    def __call__(self, text_list):
+        if isinstance(text_list, str):
+            chunks = [t.strip() for t in text_list.replace('.', '.\n').split('\n') if len(t.strip()) > 5]
+        else:
+            chunks = text_list
 
-    def _tokenize(self, text):
-        return re.findall(r'\w+', text.lower())
-
-    def __call__(self, text):
-        words = self._tokenize(text)
-        return torch.tensor([self.vocab.get(word, self.vocab["<UNK>"]) for word in words], dtype=torch.long)
+        if not chunks:
+            return torch.zeros((0, self.embedding_dim), device=self.device)
+            
+        with torch.no_grad():
+            embeddings = self.model.encode(chunks, convert_to_tensor=True, show_progress_bar=False)
+        return embeddings
 
     def size(self):
-        return len(self.vocab)
+        return self.embedding_dim

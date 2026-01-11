@@ -1,19 +1,19 @@
-# SynapTrace: Synaptic State Consistency Engine
+# HatchLogic: Synaptic State Consistency Engine
 
-**SynapTrace** is a biologically inspired narrative reasoning system designed for the **Kharagpur Data Science Hackathon (KDSH) 2026, Track B**.
+**HatchLogic** is a biologically inspired narrative reasoning system designed for the **Kharagpur Data Science Hackathon (KDSH) 2026, Track B**.
 
 ## 🚀 Overview
 
-SynapTrace moves away from traditional Transformer-based RAG architectures. Instead, it implements a **Baby Dragon Hatchling (BDH)** core—a brain-inspired reasoning engine that utilizes **Synaptic Seeding** and **Hebbian Plasticity** to verify the causal and logical consistency of character backstories against long-form novels (100k+ words).
+HatchLogic moves away from traditional Transformer-based RAG architectures. Instead, it implements a **Baby Dragon Hatchling (BDH)** core—a brain-inspired reasoning engine that utilizes **Synaptic Seeding** and **Hebbian Plasticity** to verify the causal and logical consistency of character backstories against long-form novels (100k+ words).
 
 ## 🧠 Core Architecture: Baby Dragon Hatchling (BDH)
 
 The system treats a character's backstory as a "synaptic seed" that initializes a scale-free neuronal network.
 
-1.  **Synaptic Seeding**: The backstory is encoded into the initial weights ($\sigma$) of the network, setting the character's intellectual and behavioral "priors."
-2.  **Streaming Reasoning**: The novel is ingested as a continuous stream of state updates (powered by an emulation of the **Pathway** framework).
-3.  **Hebbian Plasticity**: As the text streams, the model updates its internal synapses using the rule: "Neurons that fire together, wire together."
-4.  **Tension Detection**: Consistency is measured by monitoring the "Synaptic Tension"—an inhibitory feedback spike triggered when the narrative trajectory violates the seeded synaptic state.
+1.  **World Pre-training**: The system first ingests a broad sample of the novel to establish "General World Knowledge" (synaptic priors for the specific narrative world).
+2.  **Synaptic Seeding**: The character's specific backstory is then encoded as a "delta" over the world priors, initializing the weights ($\sigma_0$).
+3.  **Surprise-Based Inference**: As the novel streams, the model calculates "Synaptic Surprise"—the divergence between the model's prediction and the actual narrative state.
+4.  **Hebbian Plasticity**: The synapses continuously adapt to the evolving story, enabling stateful causal tracking.
 
 ## 🛠️ Tech Stack
 
@@ -34,7 +34,8 @@ The system treats a character's backstory as a "synaptic seed" that initializes 
 ├── train.csv             # Training data and labels
 ├── test.csv              # Test set for evaluation
 ├── results.csv           # Generated predictions
-└── requirements.txt      # Project dependencies
+├── requirements.txt      # Project dependencies
+└── Technical_Report.md   # Detailed methodology and findings
 ```
 
 ## 🏃 Getting Started
@@ -51,7 +52,7 @@ The system treats a character's backstory as a "synaptic seed" that initializes 
 
 ## 📊 Performance & Interpretability
 
-Unlike "black-box" LLMs, SynapTrace offers inherent interpretability. Logical contradictions manifest as specific inhibitory spikes in the neuronal graph, allowing investigators to pinpoint exactly which concept (synapse) caused the dissonance.
+Unlike "black-box" LLMs, HatchLogic offers inherent interpretability. Logical contradictions manifest as specific inhibitory spikes in the neuronal graph, allowing investigators to pinpoint exactly which concept (synapse) caused the dissonance.
 
 ---
-*Developed for KDSH 2026 | Powered by Pathway & BDH Architecture*
+*Developed by Team Decoders for KDSH 2026 | Powered by Pathway & BDH Architecture*
